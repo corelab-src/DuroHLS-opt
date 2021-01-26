@@ -1,0 +1,88 @@
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
+#include "llvm/IR/Module.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
+
+#include <set>
+#include <list>
+
+namespace corelab
+{
+
+using namespace llvm;
+using namespace std;
+
+class CallSitePrivatization: public ModulePass {
+	
+	public:
+		static char ID;
+		CallSitePrivatization() : ModulePass(ID) {};
+
+		virtual void getAnalysisUsage( AnalysisUsage &AU ) const;
+
+		StringRef getPassName() const { return "CallSite Privatization"; };
+
+		bool runOnModule(Module& M);
+
+		void setAllFunction();
+		void privatizeCallInst(CallInst *);
+		void apply2Function(Function *);
+		void apply2AllFunction();
+
+		unsigned getMetadata(Instruction *);
+		void makeMetadata(Instruction *, uint64_t);
+
+		bool isReady(Function *func) {
+			for ( auto caller : func2caller[func] )
+				if ( !func2done[caller] )
+					return false;
+			return true;
+		}
+
+		Function *getNextFunction() {
+			unsigned i = 1;
+			for ( auto func : funcSet )
+			{
+				if ( i != seed ) {
+					i++;
+					continue;
+				}
+				if ( func2done[func] )
+					continue;
+
+				addSeed();
+				return func;
+			}
+			for ( auto func : funcSet )
+			{
+				if ( func2done[func] )
+					continue;
+
+				addSeed();
+				return func;
+			}
+			return NULL;
+		}
+
+		void addSeed() {
+			unsigned size = funcSet.size();
+			if ( size == seed )
+				seed = 1;
+			else
+				seed++;
+		}
+
+	private:
+		Module *module;
+
+		set<Function *> funcSet;
+		DenseMap<Function *, bool> func2done;
+		DenseMap<Function *, set<Function *>> func2caller;
+
+		unsigned seed;
+};
+
+}
+

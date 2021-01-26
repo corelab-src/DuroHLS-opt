@@ -1,0 +1,77 @@
+######################################################
+#
+# << Templete for ARM cross-compile for tools >>
+#
+# Don't compile here  !! 
+#
+# goto tools/
+#
+# and make -f Makefile.arm
+#
+######################################################
+
+#TOOL_NAME=uva
+TOOLS=$(CORELAB)/src/llvm-corelab/tools/$(TOOL_NAME)
+TARGET=arm
+LLVM_CXX=clang++
+LLVM_CC=clang
+ARM_CXX=arm-linux-gnueabi-g++
+AR=ar
+
+SOURCES=$(wildcard $(TOOLS)/*.cpp $(TOOLS)/*.c)
+OBJS=$(patsubst %.cpp,%.o,$(notdir $(SOURCES)))
+OBJS:=$(patsubst %.c,%.o,$(OBJS))
+OBJS_DIR=$(addprefix $(TARGET)/,$(notdir $(OBJS)))
+LIBNAME?=lib$(TOOL_NAME)_$(TARGET).a
+LIBDIR=../../Debug+Asserts/lib/$(TARGET)
+
+OBJS_DIR_SHARED=$(addprefix $(TARGET)-shared/,$(notdir $(OBJS)))
+LIBNAME_SHARED?=lib$(TOOL_NAME)_$(TARGET).so
+
+XCFLAG =\
+	-target aarch64-unknown-linux-gnueabi \
+	-I/usr/aarch64-linux-gnu \
+	-I/usr/aarch64-linux-gnu/include \
+	-I/usr/aarch64-linux-gnu/include/c++/4.9.3/aarch64-linux-gnu
+
+#XCFLAG = -target armv7l-unknown-linux-gnueabi \
+	-I/usr/arm-linux-gnueabi/include/c++/4.7.3/arm-linux-gnueabi \
+  -I/usr/arm-linux-gnueabi/include/c++/4.7.3 \
+  -I/usr/arm-linux-gnueabi/include \
+	-I$(CORELAB)/src/llvm-corelab/include
+
+DFLAGS=
+#-DINFLATE_READ 
+#-DPRINT_MEMORY_TRANSFER_INFO 
+#-DOVERHEAD_TEST
+
+.SECONDARY:
+
+all : $(OBJS_DIR)
+	$(AR) -r $(LIBNAME) $(OBJS_DIR)
+	mkdir -p $(LIBDIR)
+	mv $(LIBNAME) $(LIBDIR)
+
+shared : $(OBJS_DIR_SHARED)
+	$(ARM_CXX) -shared $(OBJS_DIR_SHARED) -o $(LIBNAME_SHARED)
+	mv $(LIBNAME_SHARED) $(LIBDIR)/
+
+clean :
+	rm -rf $(TARGET)
+	rm $(LIBDIR)/$(LIBNAME)
+
+$(TARGET)/%.o : $(TOOLS)/%.cpp
+	mkdir -p $(TARGET)
+	$(LLVM_CXX) $(DFLAGS) $(XCFLAG) -O3 $(TOOLS)/$*.cpp -c -o $@ -g
+
+$(TARGET)/%.o : $(TOOLS)/%.c
+	mkdir -p $(TARGET)
+	$(LLVM_CC) $(DFLAGS) $(XCFLAG) -O3 $(TOOLS)/$*.c -c -o $@
+
+$(TARGET)-shared/%.o : $(TOOLS)/%.cpp
+	mkdir -p $(TARGET)-shared
+	$(LLVM_CXX) -fpic $(DFLAGS) $(XCFLAG) -O3 $(TOOLS)/$*.cpp -c -o $@ -g
+
+$(TARGET)-shared/%.o : $(TOOLS)/%.c
+	mkdir -p $(TARGET)-shared
+	$(LLVM_CC) -fpic $(DFLAGS) $(XCFLAG) -O3 $(TOOLS)/$*.c -c -o $@
