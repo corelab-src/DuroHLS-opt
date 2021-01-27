@@ -7,6 +7,6 @@ Lowering passes transform complex IR (e.g. intrinsic IR) into simple IR combinat
 DuroHLS-opt is coupled with DuroHLS-llvm (LLVM version 8.0.0).\\
 DuroHLS-opt should be installed after DuroHLS-llvm is installed.\\
 \\
-> make configure
-> cd llvm-corelab-install
+> make configure   \\
+> cd llvm-corelab-install   \\
 > make
